@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kasir Toko Lek Bit</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+  <header>
+    <h1>KASIR TOKO LEK BIT</h1>
+    <p>Sistem Kasir dan Pre-Order</p>
+    <button id="adminLoginToggle" onclick="bukaLoginAdmin()">Login Admin/Kasir</button>
+    <button id="logoutBtn" class="hidden" onclick="logout()">Keluar Admin</button>
+  </header>
+
+  <main>
+    <section id="loginPage" class="page login-box hidden">
+      <h2>Login Admin/Kasir</h2>
+      <p>Masuk untuk mengelola barang, transaksi, pre-order, dan riwayat.</p>
+      <form onsubmit="event.preventDefault(); login();">
+        <label for="username">Username</label>
+        <input id="username" autocomplete="username" placeholder="Masukkan username" required>
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="Masukkan password" required>
+        <button type="submit">Masuk</button>
+        <button type="button" class="secondary" onclick="tutupLoginAdmin()">Batal</button>
+      </form>
+      <p id="loginError" class="error" role="alert"></p>
+      <p class="hint">Akun demo: <b>admin / admin123</b>.</p>
+      <p class="warning">Login ini hanya demo tugas dan belum aman untuk produksi. Gunakan Firebase Authentication dan Database Rules untuk keamanan sungguhan.</p>
+    </section>
+
+    <section id="publicApp">
+      <section class="page">
+        <h2>Daftar Barang</h2>
+        <p>Lihat barang yang tersedia di Toko Lek Bit.</p>
+        <label for="cariUser">Cari barang</label>
+        <input id="cariUser" oninput="tampilkanKatalogUser()" placeholder="Ketik nama barang">
+        <div id="daftarKatalog" class="catalog"></div>
+      </section>
+
+      <section id="formPreOrder" class="page">
+        <h2>Pre-Order Barang</h2>
+        <p>Isi pesanan tanpa perlu membuat akun.</p>
+        <div class="form">
+          <input id="namaPelanggan" placeholder="Nama pelanggan" aria-label="Nama pelanggan">
+          <input id="barangPreOrder" placeholder="Nama barang yang dipesan" aria-label="Nama barang yang dipesan">
+          <input id="jumlahPreOrder" type="number" min="1" step="1" value="1" aria-label="Jumlah pesanan">
+          <button onclick="estimasiTanggalPO()">Smart Estimasi</button>
+          <input id="tanggalAmbil" type="date" aria-label="Tanggal pengambilan">
+          <button onclick="tambahPreOrderPelanggan()">Kirim Pre-Order</button>
+        </div>
+        <p class="hint">Estimasi berdasarkan jumlah barang dan antrean pre-order. Tanggal dapat disesuaikan sebelum pesanan dikirim.</p>
+      </section>
+
+      <section class="page">
+        <h2>Cek Pesanan Saya</h2>
+        <p>Masukkan nama yang sama dengan nama saat mengirim pre-order.</p>
+        <input id="filterNamaPO" oninput="tampilkanPesananSaya()" placeholder="Nama pelanggan">
+        <div class="table-wrap"><table><thead><tr><th>Waktu pesan</th><th>Barang</th><th>Jumlah</th><th>Tanggal ambil</th><th>Status</th></tr></thead><tbody id="tabelPesananSaya"></tbody></table></div>
+        <p class="hint">Catatan: pencarian berdasarkan nama hanya untuk kemudahan, bukan verifikasi identitas.</p>
+      </section>
+    </section>
+
+    <section id="adminApp" class="hidden">
+      <nav>
+        <button onclick="showPage('barang')">Kelola Barang</button>
+        <button onclick="showPage('transaksi')">Transaksi Kasir</button>
+        <button onclick="showPage('preorderAdmin')">Monitoring Pre-Order</button>
+        <button onclick="showPage('riwayat')">Riwayat</button>
+      </nav>
+      <section id="barang" class="page">
+        <h2>Kelola Barang</h2>
+        <div class="form"><input id="namaBarang" placeholder="Nama barang"><input id="hargaBarang" type="number" min="1" placeholder="Harga (Rp)"><input id="stokBarang" type="number" min="0" step="1" placeholder="Stok"><button onclick="tambahBarang()">Tambah Barang</button></div>
+        <label for="cariBarang">Cari barang</label><input id="cariBarang" oninput="cariBarangFn()" placeholder="Ketik nama barang">
+        <div class="table-wrap"><table><thead><tr><th>Nama</th><th>Harga</th><th>Stok</th><th>Aksi</th></tr></thead><tbody id="tabelBarang"></tbody></table></div>
+      </section>
+      <section id="transaksi" class="page hidden">
+        <h2>Transaksi Kasir</h2>
+        <div class="form"><select id="pilihBarang" aria-label="Pilih barang"><option value="">-- Pilih Barang --</option></select><input id="jumlahBarang" type="number" min="1" step="1" value="1" aria-label="Jumlah barang"><button onclick="tambahKeranjang()">Tambah ke Keranjang</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Barang</th><th>Jumlah</th><th>Subtotal</th><th>Aksi</th></tr></thead><tbody id="tabelKeranjang"></tbody></table></div>
+        <h3>Total pembayaran: <span id="total">Rp 0</span></h3>
+        <label for="pembayaran">Uang pembayaran (Rp)</label><input id="pembayaran" type="number" min="0" placeholder="Jumlah uang">
+        <button onclick="bayar()">Bayar</button><p>Kembalian: <b id="kembalian">Rp 0</b></p>
+      </section>
+      <section id="preorderAdmin" class="page hidden"><h2>Monitoring Pre-Order</h2><div class="table-wrap"><table><thead><tr><th>Waktu pesan</th><th>Pelanggan</th><th>Barang</th><th>Jumlah</th><th>Tanggal ambil</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="tabelPreOrder"></tbody></table></div></section>
+      <section id="riwayat" class="page hidden"><h2>Riwayat Transaksi</h2><button onclick="hapusRiwayat()">Hapus Semua Riwayat</button><div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Barang</th><th>Jumlah</th><th>Total</th></tr></thead><tbody id="tabelRiwayat"></tbody></table></div></section>
+    </section>
+  </main>
+  <footer>Kasir Toko Lek Bit · HTML, CSS, JavaScript, Firebase Realtime Database</footer>
+  <script src="script.js"></script>
+</body>
+</html>
